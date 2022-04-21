@@ -104,7 +104,6 @@ for batch in dataset.test_dataloader():
             targets[key]=[]
         results[key].append(result[key])
         targets[key].append(batch[key])
-
 # save predictions and reference values
 
 np.savez(args.rootdir+"/predictions.npz",results)
