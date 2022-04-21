@@ -92,19 +92,24 @@ dataset.setup()
 
 # Load model
 best_model = torch.load(os.path.join(args.rootdir,'best_inference_model')).to("cpu")
+import ase.db
 
+db = ase.db.connect(args.datapath)
 results = {}
 targets = {}
+keys = ["energy","forces"]
 for batch in dataset.test_dataloader():
+    idx = batch["_idx"]
+    print(batch["energy"])
     result = best_model(batch)
     for key in result:
         if key not in results:
             results[key]=[]
-        if key not in targets:
             targets[key]=[]
         results[key].append(result[key])
-        targets[key].append(batch[key])
+        targets[key].append(db.get(int(idx[0])+1).data[key])
+print(results["energy"])
+print(targets["energy"])
 # save predictions and reference values
-
 np.savez(args.rootdir+"/predictions.npz",results)
 np.savez(args.rootdir+"/reference.npz",targets)
