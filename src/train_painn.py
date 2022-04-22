@@ -9,7 +9,7 @@ sys.path.append('spk_addons')
 from spk_addons import *
 import spk_addons
 from spk_addons.utils import log_arguments
-from spk_addons.hmodel import Forces#, HDiab
+#from spk_addons.hmodel import Forces#, HDiab
 from spk_addons.data_custom import CustomData
 #import model as hmodel
 import argparse
@@ -53,13 +53,12 @@ if not os.path.exists(args.rootdir):
 
 log_arguments(vars(args))
 if args.debug:
-    logging.basicConfig(filename='train_spainn.log',level=logging.DEBUG, format='%(asctime)s:%(levelname)s:%(message)s')
+    logging.basicConfig(filename='train_painn.log',level=logging.DEBUG, format='%(asctime)s:%(levelname)s:%(message)s')
 ####### Parameter
 if args.datapath:
     datapath = args.datapath
 else:
     raise NameError("--datapath not specified.")
-
 """
 import ase.db, ase.io,ase
 dataset = ase.db.connect(args.datapath)
@@ -75,14 +74,14 @@ for i in range(len(dataset)):
         elif key == "forces":
             data[key]=np.array(d[key]).reshape(8,3)
         else:
-            data[key]=np.array(d[key])
+            data[key]=np.array([d[key]])
     datalist.append(data)
 
 
 molecs = ase.io.read(args.datapath,":")
 p=dataset.metadata["_property_unit_dict"] 
 os.system("rm -f Test.db")
-db=ASEAtomsData.create("Test.db",    distance_unit='Ang', property_unit_dict=p)#{"energy":1,"forces":1})
+db=ASEAtomsData.create("Test.db",    distance_unit=1, property_unit_dict=p)#{"energy":1,"forces":1})
 db.add_systems(datalist,molecs)
 """
 batch_size = args.batch_size
@@ -103,7 +102,7 @@ if args.environment == "ase":
         num_val=args.num_val,
         transforms=[
         trn.ASENeighborList(cutoff=args.cutoff),
-        trn.RemoveOffsets("energy", remove_mean=True, remove_atomrefs=False, is_extensive=False),
+        trn.RemoveOffsets("energy", remove_mean=True, remove_atomrefs=False,is_extensive=False),
         trn.CastTo32()
         ],
         num_workers=args.num_worker,
@@ -117,7 +116,7 @@ if args.environment == "torch":
         num_val=args.num_val,
         transforms=[
         trn.TorchNeighborList(cutoff=args.cutoff),
-        trn.RemoveOffsets("energy", remove_mean=True, remove_atomrefs=False, is_extensive=False),
+        trn.RemoveOffsets("energy", remove_mean=True, remove_atomrefs=False,is_extensive=False),
         trn.CastTo32()
         ],
         num_workers=args.num_worker,
@@ -159,14 +158,14 @@ nnpot = spk.model.NeuralNetworkPotential(
     output_modules=[pred_energy,pred_forces],
     postprocessors=[
         trn.CastTo64(),
-        trn.AddOffsets("energy",add_mean=True,add_atomrefs=False, is_extensive=False)
+        trn.AddOffsets("energy",add_mean=True,add_atomrefs=False,is_extensive=False)
     ]
 )
 
 output_energy = spk.task.ModelOutput(
     name="energy",
     loss_fn=torch.nn.MSELoss(),
-    loss_weight=0.01,
+    loss_weight=1,
     metrics={
         "MAE": torchmetrics.MeanAbsoluteError()
     }
@@ -174,7 +173,7 @@ output_energy = spk.task.ModelOutput(
 output_forces = spk.task.ModelOutput(
     name="forces",
     loss_fn=torch.nn.MSELoss(),
-    loss_weight=0.99,
+    loss_weight=1,
     metrics={
         "MAE": torchmetrics.MeanAbsoluteError()
     }

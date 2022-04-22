@@ -9,8 +9,7 @@ import numpy as np
 sys.path.append('spk_addons')
 from spk_addons import *
 import spk_addons
-from spk_addons.logtrain import log_arguments
-from spk_addons.hmodel import Forces#, HDiab
+from spk_addons.utils import log_arguments
 from spk_addons.data_custom import CustomData
 from spk_addons.utils import read_param
 #import model as hmodel
@@ -100,7 +99,6 @@ targets = {}
 keys = ["energy","forces"]
 for batch in dataset.test_dataloader():
     idx = batch["_idx"]
-    print(batch["energy"])
     result = best_model(batch)
     for key in result:
         if key not in results:
@@ -108,8 +106,6 @@ for batch in dataset.test_dataloader():
             targets[key]=[]
         results[key].append(result[key])
         targets[key].append(db.get(int(idx[0])+1).data[key])
-print(results["energy"])
-print(targets["energy"])
 # save predictions and reference values
 np.savez(args.rootdir+"/predictions.npz",results)
 np.savez(args.rootdir+"/reference.npz",targets)
