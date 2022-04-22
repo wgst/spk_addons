@@ -22,6 +22,7 @@ parser.add_argument('--batch_size', help='Specifies batch size, default = 10', d
 parser.add_argument('--num_train', help='Set size of trainingdata, default = 100', type=int, default=20)
 parser.add_argument('--num_val', help='Set size of evaluationdata, default = 100', type=int, default=20)
 parser.add_argument('--cutoff', help='Set cutoff radius, default = 5', type=float, default=5.)
+parser.add_argument('--rho', help='Tradeoff for trainin energies and forces, default = 0.5', type=float, default=0.5)
 parser.add_argument('--features', help='Number of features, default = 30', type=int, default=30)
 parser.add_argument('--rootdir', help='Set path to output directory')
 parser.add_argument('--split_file', help='Set path to split file, default "split.npz"', default="split.npz")
@@ -165,7 +166,7 @@ nnpot = spk.model.NeuralNetworkPotential(
 output_energy = spk.task.ModelOutput(
     name="energy",
     loss_fn=torch.nn.MSELoss(),
-    loss_weight=1,
+    loss_weight=args.rho,
     metrics={
         "MAE": torchmetrics.MeanAbsoluteError()
     }
@@ -173,7 +174,7 @@ output_energy = spk.task.ModelOutput(
 output_forces = spk.task.ModelOutput(
     name="forces",
     loss_fn=torch.nn.MSELoss(),
-    loss_weight=1,
+    loss_weight=1-args.rho,
     metrics={
         "MAE": torchmetrics.MeanAbsoluteError()
     }
