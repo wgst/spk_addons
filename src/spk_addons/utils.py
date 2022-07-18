@@ -4,7 +4,32 @@ import sys
 import argparse
 import logging
 from os import getcwd
+import yaml
 
+import schnetpack as spk
+
+def get_representation(args):
+
+    radial_basis = spk.nn.GaussianRBF(n_rbf=args.n_gaussian, cutoff = args.cutoff)
+
+    if args.painn:
+        representation = spk.representation.PaiNN(n_atom_basis = args.features,
+                                    n_interactions = args.interactions,
+                                    radial_basis = radial_basis,
+                                    cutoff_fn = spk.nn.CosineCutoff(args.cutoff))
+    if args.schnet:
+        representation = spk.representation.SchNet(n_atom_basis = args.features,
+                                    n_interactions = args.interactions,
+                                    radial_basis = radial_basis,
+                                    cutoff_fn = spk.nn.CosineCutoff(args.cutoff))
+    return representation
+
+def read_tradeoffs(filename):
+    #Properties = ['system1', 'system2', 't_system1', 't_system2']
+    with open(filename, 'r') as tf:
+        propdict = yaml.safe_load(tf)
+
+    return propdict
 
 def read_param(filename):
 
