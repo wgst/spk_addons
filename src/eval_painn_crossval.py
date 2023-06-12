@@ -20,8 +20,8 @@ from schnetpack.data import *
 parser = argparse.ArgumentParser(description='PAiNN for hamiltonian and diabatization')
 parser.add_argument('--datapath', help='Path to database file')
 parser.add_argument('--batch_size', help='Specifies batch size, default = 10', default=1, type=int)
-parser.add_argument('--num_train', help='Set size of trainingdata, default = 100', type=int, default=20)
-parser.add_argument('--num_val', help='Set size of evaluationdata, default = 100', type=int, default=20)
+parser.add_argument('--num_train', help='Set size of trainingdata, default = 100', type=int, default=4000)
+parser.add_argument('--num_val', help='Set size of evaluationdata, default = 100', type=int, default=1000)
 parser.add_argument('--cutoff', help='Set cutoff radius, default = 5', type=float, default=5.)
 parser.add_argument('--features', help='Number of features, default = 30', type=int, default=30)
 parser.add_argument('--rootdir', help='Set path to output directory')
@@ -49,7 +49,7 @@ parser.add_argument('--test', help="If set, test data is validated", action="sto
 args = parser.parse_args()
 if args.overwrite:
     os.system(" rm -f %s/evaluation.txt"%args.rootdir)
-split = np.load("%s"%os.path.join(args.rootdir,"split.npz"))
+split = np.load(args.split_file)
 
 train_idx = split["train_idx"]
 test_idx = split["test_idx"]
@@ -57,10 +57,8 @@ val_idx = split["val_idx"]
 
 params = read_param(os.path.join(args.rootdir,"args.json"))
 
-if os.path.exists(os.path.dirname(args.split_file)):
-    split_file = args.split_file
-else:
-    split_file = os.path.join(args.rootdir, args.split_file)
+print('params...')
+print(params)
 
 if params["environment"] == "ase":
     converter = spk.interfaces.AtomsConverter(neighbor_list=trn.ASENeighborList(cutoff=float(params["cutoff"])))
@@ -73,9 +71,9 @@ if params["environment"] == "ase":
         trn.CastTo32()
     ],
     num_workers=args.num_worker,
-    split_file=split_file,
+    split_file=args.split_file,
     load_properties=["energy","forces"],
-    pin_memory=False, # set to false, when not using a GPU
+    pin_memory=True, # set to false, when not using a GPU
     )
 if params["environment"] == "torch":
     converter = spk.interfaces.AtomsConverter(neighbor_list=trn.TorchNeighborList(cutoff=params["cutoff"]))
@@ -88,21 +86,17 @@ if params["environment"] == "torch":
         trn.CastTo32()
     ],
     num_workers=args.num_worker,
-    split_file=split_file,
+    split_file=args.split_file,
     load_properties=["energy","forces"],
-    pin_memory=False, # set to false, when not using a GPU
+    pin_memory=True, # set to false, when not using a GPU
     )
 dataset.prepare_data()
 dataset.setup()
 
 # Load model
-#best_model = torch.load(os.path.join(args.rootdir,'best_inference_model')).to("cuda")
-best_model = torch.load(os.path.join(args.rootdir,'best_inference_model'),map_location=torch.device("cpu")).to("cpu") #,map_location=torch.device("cuda") ) #.to("cuda")
-#RuntimeError: Expected one of cpu, cuda, xpu, mkldnn, opengl, opencl, ideep, hip, msnpu, xla, vulkan device type at start of device string: gpu
+best_model = torch.load(os.path.join(args.rootdir,'best_inference_model')).to("cpu")
 
 import ase.db
-
-print('Load data...')
 
 db = ase.db.connect(args.datapath)
 results = {}
@@ -113,14 +107,10 @@ if args.test==True:
 else:
     data_load = dataset.val_dataloader()
 
-print('Prepare arrays...')
 
-# converter = spk.interfaces.AtomsConverter(neighbor_list=trn.ASENeighborList(cutoff=args.cutoff), dtype=torch.float32)
-# print(data_load[0])
 for batch in data_load:
     idx = batch["_idx"]
-    #inputs = converter(batch)
-    result = best_model(batch) #inputs)
+    result = best_model(batch)
     for key in result:
         if key not in results:
             results[key]=[]
@@ -128,6 +118,5 @@ for batch in data_load:
         results[key].append(result[key])
         targets[key].append(db.get(int(idx[0])+1).data[key])
 # save predictions and reference values
-print('Printing prediction and reference files...')
 np.savez(args.rootdir+"/predictions.npz",results)
 np.savez(args.rootdir+"/reference.npz",targets)

@@ -44,6 +44,7 @@ parser.add_argument('--lr_min', help="Set minimum learning rate, default = 1e-6"
 parser.add_argument('--overwrite', help="Overwrite training directory", action="store_true")
 parser.add_argument('--debug', help="Set logging to debug", action="store_true")
 parser.add_argument('--environment', help="Set environment provider. torch or ase. torch supports PBC", type=str, default="ase")
+#parser.add_argument("--split", help="Split into [train] [validation] and use remaining for testing", type=int,nargs=2, default=[None, None])
 args = parser.parse_args()
 if args.overwrite:
     os.system(" rm -rf %s"%args.rootdir)
@@ -86,42 +87,46 @@ db=ASEAtomsData.create("Test.db",    distance_unit=1, property_unit_dict=p)#{"en
 db.add_systems(datalist,molecs)
 """
 batch_size = args.batch_size
-num_train = args.num_train
-num_val = args.num_val
+# num_train = args.num_train
+# num_val = args.num_val
 cutoff = args.cutoff
 n_atom_basis = args.features
 max_epochs = args.max_epochs
 n_interactions = args.interactions
-split_file = args.split_file
-#Datensatz laden, prepare, etc
+if os.path.exists(os.path.dirname(args.split_file)):
+    split_file = args.split_file
+else:
+    split_file = os.path.join(args.rootdir, args.split_file)
 
+#Datensatz laden, prepare, etc
 # get nstates by parsing metadata
 n_ener = 1
+#print(os.path.join(args.rootdir, "split.npz"))
 if args.environment == "ase":
     dataset = CustomData(args.datapath,batch_size=args.batch_size,
-        num_train=args.num_train,
-        num_val=args.num_val,
+        num_train=args.num_train, # comment if split file
+        num_val=args.num_val, # comment if split file
         transforms=[
         trn.ASENeighborList(cutoff=args.cutoff),
         trn.RemoveOffsets("energy", remove_mean=True, remove_atomrefs=False,is_extensive=False),
         trn.CastTo32()
         ],
         num_workers=args.num_worker,
-        split_file=os.path.join(args.rootdir, "split.npz"),
+        split_file=split_file,
         load_properties=["energy","forces"],
         pin_memory=True, # set to false, when not using a GPU
     )
 if args.environment == "torch":
     dataset = CustomData(args.datapath,batch_size=args.batch_size,
-        num_train=args.num_train,
-        num_val=args.num_val,
+        #num_train=args.num_train,
+        #num_val=args.num_val,
         transforms=[
         trn.TorchNeighborList(cutoff=args.cutoff),
         trn.RemoveOffsets("energy", remove_mean=True, remove_atomrefs=False,is_extensive=False),
         trn.CastTo32()
         ],
         num_workers=args.num_worker,
-        split_file=os.path.join(args.rootdir, "split.npz"),
+        split_file=split_file,
         load_properties=["energy","forces"],
         pin_memory=True, # set to false, when not using a GPU
     )

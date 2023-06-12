@@ -43,6 +43,8 @@ plt.ylabel("Energy QC")
 plt.legend(fontsize="x-large")
 plt.savefig(path+"/Energy.png",dpi=300,transparent=True,bbox_inches="tight")
 
+plt.clf() # clear plot
+
 MAEf =np.mean(np.abs(forces_nn-forces_qc))
 plt.scatter(forces_nn,forces_qc,label="MAE:%f"%MAEf)
 plt.xlabel("Forces NN")
