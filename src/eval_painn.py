@@ -28,7 +28,7 @@ parser.add_argument('--rootdir', help='Set path to output directory')
 parser.add_argument('--split_file', help='Set path to split file, default "split.npz"', default="split.npz")
 parser.add_argument('--max_epochs', help='Number of maximum epochs, default = 100', type=int, default=100)
 parser.add_argument('--interactions', help='Number of interactions, default = 3', type=int, default=3)
-parser.add_argument('--gpu' , help="If set, number of GPUs", type=int)
+parser.add_argument('--gpu' , help="If set, number of GPUs", type=int, default=0)
 parser.add_argument('--layer' , help="Set number of layers, default = 3", type=int, default=3)
 parser.add_argument('--schnet', help="Use representation SchNet", action="store_true")
 parser.add_argument('--painn', help="Use representation PAiNN", action="store_true")
@@ -62,6 +62,11 @@ if os.path.exists(os.path.dirname(args.split_file)):
 else:
     split_file = os.path.join(args.rootdir, args.split_file)
 
+if args.gpu>0:
+    pin_mem = True
+else:
+    pin_mem = False
+
 if params["environment"] == "ase":
     converter = spk.interfaces.AtomsConverter(neighbor_list=trn.ASENeighborList(cutoff=float(params["cutoff"])))
     dataset = CustomData(args.datapath,batch_size=args.batch_size,
@@ -75,7 +80,7 @@ if params["environment"] == "ase":
     num_workers=args.num_worker,
     split_file=split_file,
     load_properties=["energy","forces"],
-    pin_memory=False, # set to false, when not using a GPU
+    pin_memory=pin_mem, # set to false, when not using a GPU
     )
 if params["environment"] == "torch":
     converter = spk.interfaces.AtomsConverter(neighbor_list=trn.TorchNeighborList(cutoff=params["cutoff"]))
@@ -90,7 +95,7 @@ if params["environment"] == "torch":
     num_workers=args.num_worker,
     split_file=split_file,
     load_properties=["energy","forces"],
-    pin_memory=False, # set to false, when not using a GPU
+    pin_memory=pin_mem, # set to false, when not using a GPU
     )
 dataset.prepare_data()
 dataset.setup()
