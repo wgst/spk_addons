@@ -44,7 +44,7 @@ parser.add_argument('--lr_min', help="Set minimum learning rate, default = 1e-6"
 parser.add_argument('--overwrite', help="Overwrite training directory", action="store_true")
 parser.add_argument('--debug', help="Set logging to debug", action="store_true")
 parser.add_argument('--environment', help="Set environment provider. torch or ase. torch supports PBC", type=str, default="ase")
-#parser.add_argument("--split", help="Split into [train] [validation] and use remaining for testing", type=int,nargs=2, default=[None, None])
+
 args = parser.parse_args()
 if args.overwrite:
     os.system(" rm -rf %s"%args.rootdir)
@@ -118,8 +118,8 @@ if args.environment == "ase":
     )
 if args.environment == "torch":
     dataset = CustomData(args.datapath,batch_size=args.batch_size,
-        #num_train=args.num_train,
-        #num_val=args.num_val,
+        num_train=args.num_train,
+        num_val=args.num_val,
         transforms=[
         trn.TorchNeighborList(cutoff=args.cutoff),
         trn.RemoveOffsets("energy", remove_mean=True, remove_atomrefs=False,is_extensive=False),
